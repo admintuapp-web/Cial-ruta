@@ -207,6 +207,20 @@ function captureGPS(cb){
     if(s>=25&&best)done();else if(s>=20&&!best)msg(gpsHelp(3)+' Si no aparece, usa "Guardar sin GPS" y tómalo después desde Editar.','var(--amb)')},1000);
 }
 
+/* ---------- Instalar ---------- */
+const inApp=/WhatsApp|FBAN|FBAV|Instagram|; wv\)|Line\//i.test(navigator.userAgent);
+async function installHelp(){
+  if(installEv){try{installEv.prompt();const c=await installEv.userChoice;installEv=null;if(c&&c.outcome==='accepted'){toast('¡Listo! Busca el ícono de CIAL en tu pantalla');render();return}}catch(e){}}
+  const step=(n,t)=>`<li style="align-items:flex-start"><span class="time" style="width:36px;font-size:26px;color:var(--red)">${n}</span><div class="grow" style="padding-top:4px">${t}</div></li>`;
+  let body;
+  if(inApp)body=step(1,'Estás dentro de WhatsApp u otra app. Toca los <b>tres puntos ⋮</b> (arriba a la derecha) y elige <b>Abrir en Chrome</b>'+(isIOS?' (o en Safari)':'')+'.')+step(2,'Ya en el navegador, vuelve a tocar <b>Instalar app</b>.');
+  else if(isIOS)body=step(1,'Toca el botón <b>Compartir</b> (el cuadrado con una flecha hacia arriba ⬆️). En Safari está abajo; en Chrome, arriba a la derecha.')+step(2,'Baja y toca <b>Agregar a pantalla de inicio</b>.')+step(3,'Toca <b>Agregar</b>. Aparece el ícono de CIAL en tu pantalla: ábrela siempre desde ahí.');
+  else body=step(1,'Toca los <b>tres puntos ⋮</b> arriba a la derecha de Chrome.')+step(2,'Toca <b>Instalar app</b> o <b>Agregar a pantalla principal</b>.')+step(3,'Confirma con <b>Instalar</b>. Aparece el ícono de CIAL en tu pantalla: ábrela siempre desde ahí.')
+    +'<li class="s mut">Si no aparece la opción, recarga la página con internet y espera unos segundos.</li>';
+  openSheet(`<h2>Instalar la app</h2><ul class="list" style="margin-top:10px">${body}</ul><button class="pri full" id="iOk" style="margin-top:12px">Entendido</button>`);
+  $('#iOk').onclick=closeSheet;
+}
+
 /* ---------- Mapa de clientes cercanos ---------- */
 const mapRoutes=()=>mfilter==='all'||!route()?S.routes:[route()];
 const cliPopup=(rt,c)=>`<b>${esc(c.fantasia||c.rs)}</b><br>${esc(c.rs||'')}<br>${esc(rt.name)}${rt.startClock!=null?' · '+hhmm(rt.startClock+c.offset):''}<br>${esc(ESTADOS[c.estado]||'')}${c.alerta?'<br><b>'+esc(c.alerta)+'</b>':''}${c.atiende?'<br>Atiende: '+esc(c.atiende):''}<br><a href="https://waze.com/ul?ll=${c.lat},${c.lng}&navigate=yes">Waze</a> · <a href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">Google Maps</a>`;
@@ -343,9 +357,8 @@ function vRutas(){
   const L=S.routes.map(r=>`<li><div class="grow"><div class="name">${esc(r.name)}</div><div class="mut s">${r.clients.length} clientes · ${r.seller?'Vendedor: '+esc(r.seller)+' · ':''}Meta ${clp(r.meta)}</div></div>
     <button data-sel="${esc(r.id)}" class="${r.id===S.sel?'pri':''}">${r.id===S.sel?'Elegida':'Elegir'}</button></li>`).join('');
     $('#view').innerHTML=`${brandStrip()}
-  ${standalone()?'':`<div class="note w"><b>Instala la app en tu teléfono</b>: así funciona sin señal y tus datos quedan siempre guardados.<br>
-    ${isIOS?'En Safari toca Compartir → <b>Agregar a pantalla de inicio</b>. Instálala <b>antes</b> de anotar clientes: lo anotado en el navegador no pasa a la app instalada (para pasarlo usa Guardar respaldo / Restaurar).':
-      installEv?'<button class="pri full" id="inst" style="margin-top:8px">Instalar app</button>':'En Chrome toca ⋮ → <b>Agregar a pantalla principal</b> o <b>Instalar app</b>.'}</div>`}
+  ${standalone()?'':`<div class="note w" style="text-align:center"><b>Instala la app en tu teléfono</b><br><span class="s">Así funciona sin señal y tus datos quedan siempre guardados.</span>
+    <button class="pri huge full" id="inst" style="margin-top:10px">Instalar app</button></div>`}
   ${S.me?'':`<div class="card"><h3>¿Cómo te llamas?</h3><p class="mut s">Así queda tu nombre en las rutas que compartas con tus colegas.</p>
     <div class="row"><input id="meN" placeholder="Nombre y apellido" style="flex:3 1 0"><button class="pri" id="meOk">Guardar</button></div></div>`}
   <div class="card"><h2>Mis rutas</h2><p class="mut s">Una ruta por día o sector. El vendedor oficial la graba; el reemplazo la recibe y la hace.</p>
@@ -364,7 +377,7 @@ function vRutas(){
   <div class="card"><h3>Mis datos</h3><p class="mut s">${S.me?'Vendedor: <b style="color:var(--ink)">'+esc(S.me)+'</b> · ':''}Todo queda guardado en este teléfono. Guarda un respaldo de vez en cuando o antes de cambiar de teléfono.</p>
     <div class="row"><button id="bk">Guardar respaldo</button><button id="rs">Restaurar</button></div>
     <div class="row" style="margin-top:10px">${S.me?'<button id="meCh">Cambiar mi nombre</button>':''}<button id="sup">${admin?'Ir a Administrar':'Administrar rutas'}</button></div></div>`;
-  const inst=$('#inst');if(inst)inst.onclick=async()=>{try{installEv.prompt();await installEv.userChoice}catch(e){}installEv=null;render()};
+  const inst=$('#inst');if(inst)inst.onclick=installHelp;
   const meOk=$('#meOk');if(meOk)meOk.onclick=()=>{const v=$('#meN').value.trim();if(!v){toast('Escribe tu nombre');return}S.me=v;save();render()};
   const meCh=$('#meCh');if(meCh)meCh.onclick=()=>{S.me='';render()};
   const sp=$('#sendP');if(sp)sp.onclick=()=>sendRoutes();
@@ -782,7 +795,8 @@ if(!navigator.onLine){$('#net').textContent='Sin señal';$('#net').style.color='
 if(S.run||S.rec)startWatch();if(S.run)keepAwake();
 try{navigator.serviceWorker&&isSecureContext&&navigator.serviceWorker.register('sw.js')}catch(e){}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e;if(view==='rutas')render()});
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e});
+addEventListener('appinstalled',()=>{installEv=null;toast('App instalada');render()});
 render();
 IDB.get().then(v=>{try{
   if(v){const o=JSON.parse(v);if((o.savedAt||0)>(S.savedAt||0)){S=Object.assign(S,o);try{localStorage.setItem(KEY,v)}catch(e){}render()}}
